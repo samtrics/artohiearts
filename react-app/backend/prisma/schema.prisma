@@ -1,0 +1,312 @@
+// ============================================================
+// Artohie — Prisma Schema (SQLite & PostgreSQL Compatible)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── Artist Profile (extended with APS fields) ──────────────
+
+model ArtistProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Identity
+  displayName  String  @map("display_name")
+  avatarUrl    String? @map("avatar_url")
+  tagline      String?
+  bio          String?
+  websiteUrl   String? @map("website_url")
+
+  // APS cached values (updated nightly by cron)
+  apsScore     Int     @default(0) @map("aps_score")
+  apsTier      String  @default("novice") @map("aps_tier")
+  apsUpdatedAt DateTime? @map("aps_updated_at")
+
+  // User Role Configuration
+  role         String  @default("artist")
+
+
+  // AI quality signals (updated on upload)
+  aiCompositionScore   Float @default(0) @map("ai_composition_score")
+  peerReviewAverage    Float? @map("peer_review_average")
+  collectionPlacements Int   @default(0) @map("collection_placements")
+  editorialFeatures    Int   @default(0) @map("editorial_features")
+  highResFidelityScore Float @default(0) @map("high_res_fidelity_score")
+  originalityScore     Float @default(100) @map("originality_score")
+
+  // Trust signals
+  verificationTier  Int     @default(0) @map("verification_tier")
+  followerQualityScore Float @default(100) @map("follower_quality_score")
+  followerCount     Int     @default(0) @map("follower_count")
+
+  // Consistency tracking
+  uploadStreakDays  Int       @default(0) @map("upload_streak_days")
+  lastUploadAt      DateTime? @map("last_upload_at")
+  lastEngagementAt  DateTime? @map("last_engagement_at")
+
+  // Profile completeness
+  profileCompleteness   Float @default(0) @map("profile_completeness")
+  bioCompleteness       Float @default(0) @map("bio_completeness")
+  portfolioSiteActive   Boolean @default(false) @map("portfolio_site_active")
+  socialLinksVerified   Int   @default(0) @map("social_links_verified")
+  customDomainActive    Boolean @default(false) @map("custom_domain_active")
+  artistStatementFilled Boolean @default(false) @map("artist_statement_filled")
+  exhibitionCount       Int   @default(0) @map("exhibition_count")
+
+  // Status flags
+  isActive            Boolean @default(true) @map("is_active")
+  isVerified          Boolean @default(false) @map("is_verified")
+  isFeaturedEditorial Boolean @default(false) @map("is_featured_editorial")
+  hasSoldFirstArtwork Boolean @default(false) @map("has_sold_first_artwork")
+  hasContentViolation Boolean @default(false) @map("has_content_violation")
+
+  // Relations
+  rankings     Ranking[]
+  achievements Achievement[]
+  artworks     Artwork[]
+
+  @@map("artist_profiles")
+  @@index([apsScore(sort: Desc)])
+  @@index([apsTier])
+}
+
+// ── Rankings Table ─────────────────────────────────────────
+
+model Ranking {
+  id          String   @id @default(uuid())
+  artistId    String   @map("artist_id")
+  rankingDate DateTime @map("ranking_date")
+  calculatedAt DateTime @map("calculated_at")
+
+  // Composite score
+  totalScore  Int @map("total_score")
+  tier        String
+  tierLabel   String @map("tier_label")
+
+  // Pillar scores (raw 0–100)
+  engagementScore      Float @map("engagement_score")
+  qualityScore         Float @map("quality_score")
+  salesScore           Float @map("sales_score")
+  consistencyScore     Float @map("consistency_score")
+  reputationScore      Float @map("reputation_score")
+  profileStrengthScore Float @map("profile_strength_score")
+
+  // Modifiers
+  decayFactor      Float @map("decay_factor")
+  bonusMultiplier  Float @map("bonus_multiplier")
+
+  // Analytics
+  percentile     Int
+  scoreDelta24h  Int @map("score_delta_24h")
+  momentum       String // 'rising' | 'stable' | 'falling'
+
+  // Full JSON breakdown (for detail views)
+  pillarBreakdown String @map("pillar_breakdown")
+  decayPenalties  String @map("decay_penalties")
+  bonusMultipliers String @map("bonus_multipliers")
+
+  artist ArtistProfile @relation(fields: [artistId], references: [id])
+
+  @@unique([artistId, rankingDate])
+  @@map("rankings")
+  @@index([rankingDate, totalScore(sort: Desc)])
+  @@index([tier, rankingDate])
+  @@index([artistId, rankingDate(sort: Desc)])
+}
+
+// ── Achievements (unlocked by tier milestones) ─────────────
+
+model Achievement {
+  id         String   @id @default(uuid())
+  artistId   String   @map("artist_id")
+  type       String   // 'tier_reached' | 'streak' | 'first_sale' | 'featured'
+  tier       String?  // associated tier if type = 'tier_reached'
+  title      String
+  description String
+  iconUrl    String?  @map("icon_url")
+  unlockedAt DateTime @map("unlocked_at")
+
+  artist ArtistProfile @relation(fields: [artistId], references: [id])
+
+  @@map("achievements")
+  @@index([artistId])
+}
+
+// ── Minimal supporting models ──────────────────────────────
+
+model Artwork {
+  id         String   @id @default(uuid())
+  artistId   String   @map("artist_id")
+  priceTier  Int      @default(1) @map("price_tier")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  artist ArtistProfile @relation(fields: [artistId], references: [id])
+
+  @@map("artworks")
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  artworkId String   @map("artwork_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("likes")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  artworkId String   @map("artwork_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("comments")
+}
+
+model Save {
+  id        String   @id @default(uuid())
+  artworkId String   @map("artwork_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("saves")
+}
+
+model Repost {
+  id        String   @id @default(uuid())
+  artworkId String   @map("artwork_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("reposts")
+}
+
+model ProfileView {
+  id        String   @id @default(uuid())
+  artistId  String   @map("artist_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("profile_views")
+}
+
+model StoryView {
+  id        String   @id @default(uuid())
+  artistId  String   @map("artist_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("story_views")
+}
+
+model Order {
+  id         String   @id @default(uuid())
+  artistId   String   @map("artist_id")
+  buyerId    String   @map("buyer_id")
+  artworkId  String?  @map("artwork_id")
+  amountUsd  Float    @map("amount_usd")
+  orderType  String   @map("order_type") // 'artwork' | 'commission'
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("orders")
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  artistId  String   @map("artist_id")
+  status    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("subscriptions")
+}
+
+model LimitedDrop {
+  id             String   @id @default(uuid())
+  artistId       String   @map("artist_id")
+  endedAt        DateTime @map("ended_at")
+  sellThroughPct Float    @map("sell_through_pct")
+
+  @@map("limited_drops")
+}
+
+model BlogPost {
+  id        String   @id @default(uuid())
+  artistId  String   @map("artist_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("blog_posts")
+}
+
+model Livestream {
+  id        String   @id @default(uuid())
+  artistId  String   @map("artist_id")
+  startedAt DateTime @default(now()) @map("started_at")
+
+  @@map("livestreams")
+}
+
+model Commission {
+  id                 String   @id @default(uuid())
+  artistId           String   @map("artist_id")
+  status             String   // 'pending' | 'accepted' | 'completed' | 'declined'
+  respondedWithin24h Boolean  @default(false) @map("responded_within_24h")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@map("commissions")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  artistId  String   @map("artist_id")
+  rating    Float
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("reviews")
+}
+
+model Report {
+  id        String   @id @default(uuid())
+  targetId  String   @map("target_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("reports")
+}
+
+model Dispute {
+  id         String   @id @default(uuid())
+  artistId   String   @map("artist_id")
+  resolution String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("disputes")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  body      String
+  data      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+model Category {
+  id   String @id @default(uuid())
+  slug String @unique
+
+  @@map("categories")
+}
+
+model ArtworkCategory {
+  artworkId  String @map("artwork_id")
+  categoryId String @map("category_id")
+
+  @@id([artworkId, categoryId])
+  @@map("artwork_categories")
+}
