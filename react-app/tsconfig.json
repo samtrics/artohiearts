@@ -8,7 +8,6 @@
     "skipLibCheck": true,
     "types": []
   },
-  "files": [],
-  "include": [],
+  "files": ["placeholder.ts"],
   "exclude": ["node_modules", "react-app"]
 }
