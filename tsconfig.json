@@ -8,5 +8,7 @@
     "skipLibCheck": true,
     "types": []
   },
+  "files": [],
+  "include": [],
   "exclude": ["node_modules", "react-app"]
 }
