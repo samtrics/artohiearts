@@ -35,24 +35,42 @@ export default function CreateAccount() {
     setError('');
 
     try {
-      // 1. Sign up user via Supabase
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      const isSupabaseConfigured = 
+        import.meta.env.VITE_SUPABASE_URL && 
+        !import.meta.env.VITE_SUPABASE_URL.includes('placeholder') &&
+        import.meta.env.VITE_SUPABASE_ANON_KEY &&
+        !import.meta.env.VITE_SUPABASE_ANON_KEY.includes('placeholder');
 
-      if (authError) {
-        throw authError;
+      let userId;
+      let sessionToken;
+
+      if (isSupabaseConfigured) {
+        // 1. Sign up user via Supabase
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (authError) {
+          throw authError;
+        }
+
+        if (!authData?.user) {
+          throw new Error('Supabase registration succeeded but user details were not returned.');
+        }
+
+        userId = authData.user.id;
+        sessionToken = authData.session?.access_token;
+      } else {
+        // Local-only development fallback: Generate a random UUID locally
+        userId = window.crypto?.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       }
 
-      if (!authData?.user) {
-        throw new Error('Supabase registration succeeded but user details were not returned.');
-      }
-
-      // 2. Synchronize profile creation to backend database with Supabase user ID
+      // 2. Synchronize profile creation to backend database
       const registerRes = await api.register({
-        userId: authData.user.id,
+        userId,
         email,
+        password, // For local fallback credentials hashing
         displayName: fullName,
         tagline: email,
         specialty: role === 'artist' ? (category || 'Digital Visual Creator') : 'Art Collector',
@@ -60,10 +78,15 @@ export default function CreateAccount() {
       });
 
       // 3. Save active auth token and profile locally
-      if (authData.session?.access_token) {
-        api.setToken(authData.session.access_token);
+      if (sessionToken) {
+        api.setToken(sessionToken);
       } else if (registerRes.token) {
         api.setToken(registerRes.token);
+      }
+
+      // Save artist details locally
+      if (registerRes.artist) {
+        api.setArtist(registerRes.artist);
       }
 
       navigate('/');

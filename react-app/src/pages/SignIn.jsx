@@ -28,27 +28,44 @@ export default function SignIn() {
     setError('');
 
     try {
-      // 1. Sign in via Supabase
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const isSupabaseConfigured = 
+        import.meta.env.VITE_SUPABASE_URL && 
+        !import.meta.env.VITE_SUPABASE_URL.includes('placeholder') &&
+        import.meta.env.VITE_SUPABASE_ANON_KEY &&
+        !import.meta.env.VITE_SUPABASE_ANON_KEY.includes('placeholder');
 
-      if (authError) {
-        throw authError;
+      if (isSupabaseConfigured) {
+        // 1. Sign in via Supabase
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (authError) {
+          throw authError;
+        }
+
+        if (!authData?.session) {
+          throw new Error('Supabase login succeeded but no session returned.');
+        }
+
+        // Save token locally
+        const token = authData.session.access_token;
+        api.setToken(token);
+
+        // 2. Retrieve local database profile using the authenticated session token
+        const profile = await api.getMe();
+        api.setArtist(profile);
+      } else {
+        // Local fallback: login directly using Express credential database
+        const loginRes = await api.login({ email, password });
+        if (loginRes.token) {
+          api.setToken(loginRes.token);
+        }
+        if (loginRes.artist) {
+          api.setArtist(loginRes.artist);
+        }
       }
-
-      if (!authData?.session) {
-        throw new Error('Supabase login succeeded but no session returned.');
-      }
-
-      // Save token locally
-      const token = authData.session.access_token;
-      api.setToken(token);
-
-      // 2. Retrieve local database profile using the authenticated session token
-      const profile = await api.getMe();
-      api.setArtist(profile);
 
       navigate('/');
     } catch (err) {
