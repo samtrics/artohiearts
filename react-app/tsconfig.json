@@ -6,8 +6,10 @@
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
-    "types": []
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "noEmit": true
   },
-  "files": ["placeholder.ts"],
-  "exclude": ["node_modules", "react-app"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }
