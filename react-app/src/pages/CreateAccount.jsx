@@ -61,13 +61,20 @@ export default function CreateAccount() {
 
         userId = authData.user.id;
         sessionToken = authData.session?.access_token;
+
+        // Force sign out from Supabase to prevent auto-login before visiting the sign-in page
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutErr) {
+          console.warn('Sign out during registration failed:', signOutErr);
+        }
       } else {
         // Local-only development fallback: Generate a random UUID locally
         userId = window.crypto?.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       }
 
       // 2. Synchronize profile creation to backend database
-      const registerRes = await api.register({
+      await api.register({
         userId,
         email,
         password, // For local fallback credentials hashing
@@ -77,19 +84,12 @@ export default function CreateAccount() {
         role
       });
 
-      // 3. Save active auth token and profile locally
-      if (sessionToken) {
-        api.setToken(sessionToken);
-      } else if (registerRes.token) {
-        api.setToken(registerRes.token);
-      }
+      // Clear any accidental local storage auth to be 100% sure the user is guest
+      api.clearToken();
+      api.clearArtist();
 
-      // Save artist details locally
-      if (registerRes.artist) {
-        api.setArtist(registerRes.artist);
-      }
-
-      navigate('/');
+      // Redirect to sign in page with success parameters
+      navigate(`/signin?registered=true&email=${encodeURIComponent(email)}`);
     } catch (err) {
       if (err.message === 'Failed to fetch' || err.message.includes('fetch') || err.message.includes('NetworkError')) {
         setError('Connection Refused: Unable to connect to the backend API. Please ensure your Express backend server is running on port 5000 (locally) or your production backend URL is updated in vercel.json.');

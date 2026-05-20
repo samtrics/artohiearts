@@ -223,13 +223,18 @@ export default function ArtistProfile() {
         setLoading(true);
         let targetId = artistId;
         
-        // If no ID is passed, fetch all active creators and load the first one
+        // If no ID is passed, load the current logged-in artist, or fallback to the first active creator
         if (!targetId) {
-          const allArtists = await api.getArtists();
-          if (allArtists && allArtists.length > 0) {
-            targetId = allArtists[0].id;
+          const currentUser = api.getArtist();
+          if (currentUser && currentUser.id) {
+            targetId = currentUser.id;
           } else {
-            throw new Error("No artist profiles found. Run seed script first!");
+            const allArtists = await api.getArtists();
+            if (allArtists && allArtists.length > 0) {
+              targetId = allArtists[0].id;
+            } else {
+              throw new Error("No artist profiles found. Run seed script first!");
+            }
           }
         }
 

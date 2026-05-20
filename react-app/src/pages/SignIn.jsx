@@ -1,22 +1,29 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api } from '../utils/api';
 import { supabase } from '../utils/supabaseClient';
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const registered = searchParams.get('registered') === 'true';
+  const initialEmail = searchParams.get('email') || '';
+
   // Spotlight Hover state: null, 0, 1, or 2
   const [hoveredPicIndex, setHoveredPicIndex] = useState(null);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Scroll to top on mount
+  // Scroll to top on mount and set initial email
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    if (initialEmail) {
+      setEmail(initialEmail);
+    }
+  }, [initialEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -67,7 +74,7 @@ export default function SignIn() {
         }
       }
 
-      navigate('/');
+      navigate('/artist-profile');
     } catch (err) {
       if (err.message === 'Failed to fetch' || err.message.includes('fetch') || err.message.includes('NetworkError')) {
         setError('Connection Refused: Unable to connect to the backend API. Please ensure your Express backend server is running on port 5000 (locally) or your production backend URL is updated in vercel.json.');
@@ -244,6 +251,20 @@ export default function SignIn() {
               >
                 <span className="material-symbols-outlined text-[18px] text-red-600">error</span>
                 <span>{error}</span>
+              </motion.div>
+            )}
+
+            {registered && !error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 font-['Inter'] text-[14px] flex items-start gap-2.5 shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[20px] text-emerald-600 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                <div>
+                  <span className="font-semibold block text-emerald-900 mb-0.5">Account Created Successfully!</span>
+                  <span className="text-emerald-700/90 leading-relaxed">Please sign in with your credentials below to access your custom artist studio dashboard.</span>
+                </div>
               </motion.div>
             )}
 
