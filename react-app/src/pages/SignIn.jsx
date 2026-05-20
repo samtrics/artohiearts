@@ -79,6 +79,38 @@ export default function SignIn() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const isSupabaseConfigured = 
+        import.meta.env.VITE_SUPABASE_URL && 
+        !import.meta.env.VITE_SUPABASE_URL.includes('placeholder') &&
+        import.meta.env.VITE_SUPABASE_ANON_KEY &&
+        !import.meta.env.VITE_SUPABASE_ANON_KEY.includes('placeholder');
+
+      if (!isSupabaseConfigured) {
+        throw new Error('Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your env file to enable Google Sign-In.');
+      }
+
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+
+      if (authError) {
+        throw authError;
+      }
+    } catch (err) {
+      setError(err.message || 'Google Sign-In failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Dynamic animation and layout calculations based on hover spotlight state
   const getPicVariants = (idx, defaultZ) => {
     const isHovered = hoveredPicIndex === idx;
@@ -258,7 +290,7 @@ export default function SignIn() {
                   <span className="bg-transparent px-4 text-[#444748]/60 font-['Inter'] text-[12px] font-[600] uppercase">Or continue with</span>
                 </div>
               </div>
-              <button className="w-full h-14 bg-white border border-black/10 text-black font-['Inter'] text-[14px] font-[500] rounded-xl hover:bg-[#f3f3f5] hover:scale-98 active:scale-95 transition-all flex items-center justify-center gap-3" type="button">
+              <button onClick={handleGoogleSignIn} disabled={loading} className="w-full h-14 bg-white border border-black/10 text-black font-['Inter'] text-[14px] font-[500] rounded-xl hover:bg-[#f3f3f5] hover:scale-98 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed" type="button">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />

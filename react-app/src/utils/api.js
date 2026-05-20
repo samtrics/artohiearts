@@ -4,15 +4,27 @@
 
 export const api = {
   getToken: () => localStorage.getItem('artohie_token'),
-  setToken: (token) => localStorage.setItem('artohie_token', token),
-  clearToken: () => localStorage.removeItem('artohie_token'),
+  setToken: (token) => {
+    localStorage.setItem('artohie_token', token);
+    window.dispatchEvent(new Event('artohie-auth'));
+  },
+  clearToken: () => {
+    localStorage.removeItem('artohie_token');
+    window.dispatchEvent(new Event('artohie-auth'));
+  },
   
   getArtist: () => {
     const artist = localStorage.getItem('artohie_artist');
     return artist ? JSON.parse(artist) : null;
   },
-  setArtist: (artist) => localStorage.setItem('artohie_artist', JSON.stringify(artist)),
-  clearArtist: () => localStorage.removeItem('artohie_artist'),
+  setArtist: (artist) => {
+    localStorage.setItem('artohie_artist', JSON.stringify(artist));
+    window.dispatchEvent(new Event('artohie-auth'));
+  },
+  clearArtist: () => {
+    localStorage.removeItem('artohie_artist');
+    window.dispatchEvent(new Event('artohie-auth'));
+  },
 
   headers: () => {
     const headers = { 'Content-Type': 'application/json' };

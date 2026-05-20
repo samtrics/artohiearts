@@ -101,6 +101,38 @@ export default function CreateAccount() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const isSupabaseConfigured = 
+        import.meta.env.VITE_SUPABASE_URL && 
+        !import.meta.env.VITE_SUPABASE_URL.includes('placeholder') &&
+        import.meta.env.VITE_SUPABASE_ANON_KEY &&
+        !import.meta.env.VITE_SUPABASE_ANON_KEY.includes('placeholder');
+
+      if (!isSupabaseConfigured) {
+        throw new Error('Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your env file to enable Google Sign-In.');
+      }
+
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+
+      if (authError) {
+        throw authError;
+      }
+    } catch (err) {
+      setError(err.message || 'Google Sign-In failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-[#f9f9fb] text-[#1a1c1d] selection:bg-[#fedb99]">
       <main className="min-h-screen flex flex-col md:flex-row overflow-hidden">
@@ -261,7 +293,7 @@ export default function CreateAccount() {
                   <span className="font-['Inter'] text-[12px] font-[600] text-[#444748]/60">OR</span>
                   <div className="h-px bg-black/5 flex-1"></div>
                 </div>
-                <button className="w-full h-14 border border-black/10 bg-white rounded-lg font-['Inter'] text-[14px] font-[500] text-black hover:bg-[#f3f3f5] hover:scale-98 active:scale-95 transition-all flex items-center justify-center gap-3" type="button">
+                <button onClick={handleGoogleSignIn} disabled={loading} className="w-full h-14 border border-black/10 bg-white rounded-lg font-['Inter'] text-[14px] font-[500] text-black hover:bg-[#f3f3f5] hover:scale-98 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed" type="button">
                   <img alt="Google" className="w-5 h-5 grayscale hover:grayscale-0 transition-all" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzu_QbUAeWF9TDLR8aes1taKwpPF67ulsYVrm4e1bglCXSSvFdf7k5WeKQrEo1QsaZFGRH9YcIp4VXoIRB-TsZcTmJhztxhIQbdjSRZ8XsizgL21gjSfKbNmzK8OJ7_eDj2j6g5Dcchz2rz5XwpsYZ7dx-oCzQPLxGq61LA2639TAVV-Q5ICFZiwfAql2-tagfZ1fhicXIMu5TLfutBVmOcuBWW7mOvhsugUDP3sh2sJBt3tJ3Vo_Xue9n81PWMUNwv7fACiSP98w" />
                   Continue with Google
                 </button>

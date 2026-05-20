@@ -1,11 +1,47 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '../utils/api';
+import { supabase } from '../utils/supabaseClient';
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const path = location.pathname;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [artist, setArtist] = useState(null);
+
+  useEffect(() => {
+    setArtist(api.getArtist());
+    const handleAuthChange = () => {
+      setArtist(api.getArtist());
+    };
+    window.addEventListener('artohie-auth', handleAuthChange);
+    return () => {
+      window.removeEventListener('artohie-auth', handleAuthChange);
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      const isSupabaseConfigured = 
+        import.meta.env.VITE_SUPABASE_URL && 
+        !import.meta.env.VITE_SUPABASE_URL.includes('placeholder') &&
+        import.meta.env.VITE_SUPABASE_ANON_KEY &&
+        !import.meta.env.VITE_SUPABASE_ANON_KEY.includes('placeholder');
+
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+      }
+    } catch (err) {
+      console.error("Supabase signOut error:", err);
+    } finally {
+      api.logout();
+      setArtist(null);
+      navigate('/');
+      window.dispatchEvent(new Event('artohie-auth'));
+    }
+  };
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -67,12 +103,26 @@ export default function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-6">
-            <Link to="/signin" className="font-['Inter'] text-[14px] font-[500] text-black hover:text-[#735b25] transition-colors">
-              Sign In
-            </Link>
-            <Link to="/join" className="bg-black text-white font-['Inter'] text-[14px] font-[500] px-7 py-3 rounded-full hover:scale-95 transition-transform duration-200 inline-block">
-              Get Started
-            </Link>
+            {artist ? (
+              <>
+                <Link to={`/artist-profile?id=${artist.id}`} className="font-['Inter'] text-[14px] font-[600] text-[#735b25] hover:text-black transition-colors flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                  {artist.displayName}
+                </Link>
+                <button onClick={handleSignOut} className="bg-black text-white font-['Inter'] text-[14px] font-[500] px-6 py-2.5 rounded-full hover:scale-95 transition-transform duration-200 inline-block">
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/signin" className="font-['Inter'] text-[14px] font-[500] text-black hover:text-[#735b25] transition-colors">
+                  Sign In
+                </Link>
+                <Link to="/join" className="bg-black text-white font-['Inter'] text-[14px] font-[500] px-7 py-3 rounded-full hover:scale-95 transition-transform duration-200 inline-block">
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Hamburger Toggle */}
@@ -121,12 +171,26 @@ export default function Navbar() {
               ))}
               
               <div className="flex flex-col gap-4 mt-8">
-                <Link to="/signin" onClick={() => setMobileMenuOpen(false)} className="w-full py-4 text-center border border-black/10 rounded-full font-['Inter'] text-[16px] font-[600] text-black hover:bg-black/5 transition-colors">
-                  Sign In
-                </Link>
-                <Link to="/join" onClick={() => setMobileMenuOpen(false)} className="w-full py-4 text-center bg-black text-white rounded-full font-['Inter'] text-[16px] font-[600] active:scale-95 transition-transform">
-                  Get Started
-                </Link>
+                {artist ? (
+                  <>
+                    <Link to={`/artist-profile?id=${artist.id}`} onClick={() => setMobileMenuOpen(false)} className="w-full py-4 text-center border border-black/10 rounded-full font-['Inter'] text-[16px] font-[600] text-[#735b25] hover:bg-black/5 transition-colors flex items-center justify-center gap-1.5">
+                      <span className="material-symbols-outlined text-[20px]">verified_user</span>
+                      {artist.displayName}'s Studio
+                    </Link>
+                    <button onClick={() => { setMobileMenuOpen(false); handleSignOut(); }} className="w-full py-4 text-center bg-black text-white rounded-full font-['Inter'] text-[16px] font-[600] active:scale-95 transition-transform">
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/signin" onClick={() => setMobileMenuOpen(false)} className="w-full py-4 text-center border border-black/10 rounded-full font-['Inter'] text-[16px] font-[600] text-black hover:bg-black/5 transition-colors">
+                      Sign In
+                    </Link>
+                    <Link to="/join" onClick={() => setMobileMenuOpen(false)} className="w-full py-4 text-center bg-black text-white rounded-full font-['Inter'] text-[16px] font-[600] active:scale-95 transition-transform">
+                      Get Started
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
