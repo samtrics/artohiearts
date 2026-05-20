@@ -1,0 +1,16 @@
+{
+  "installCommand": "cd react-app && npm install",
+  "buildCommand": "cd react-app && npm run build",
+  "outputDirectory": "react-app/dist",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://your-backend-api-url.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
