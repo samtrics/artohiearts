@@ -69,7 +69,11 @@ export default function SignIn() {
 
       navigate('/');
     } catch (err) {
-      setError(err.message || 'Invalid email or password.');
+      if (err.message === 'Failed to fetch' || err.message.includes('fetch') || err.message.includes('NetworkError')) {
+        setError('Connection Refused: Unable to connect to the backend API. Please ensure your Express backend server is running on port 5000 (locally) or your production backend URL is updated in vercel.json.');
+      } else {
+        setError(err.message || 'Invalid email or password.');
+      }
     } finally {
       setLoading(false);
     }
