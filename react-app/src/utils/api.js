@@ -36,7 +36,9 @@ export const api = {
   },
 
   async request(endpoint, options = {}) {
-    const response = await fetch(endpoint, {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+    const response = await fetch(url, {
       ...options,
       headers: {
         ...api.headers(),
